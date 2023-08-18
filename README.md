@@ -1,7 +1,5 @@
-Awesome
-=====================
+Helpful sites:
 
-Modularized version of Awesome WM 4.x series.
-![Modularized Awesome 4.x Screenshot][awesome-4x-screenshot]
-
-[awesome-4x-screenshot]: https://gitlab.com/epsi-rns/dotfiles/raw/master/awesome/4.3/void-awesome.png
+https://awesomewm.org/
+https://github.com/lcpz/lain
+http://epsi-rns.github.io/desktop/2019/06/15/awesome-overview.html
