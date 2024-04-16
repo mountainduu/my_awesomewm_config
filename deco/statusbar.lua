@@ -79,7 +79,8 @@ local cpu = lain.widget.cpu({
 -- Coretemp
 local tempicon = wibox.widget.imagebox(icons.widget_temp)
 local cpu_temp = wibox.widget.textbox()
-awful.widget.watch('bash -c "cat /sys/class/hwmon/hwmon3/temp1_input"', 5, function(widget, stdout)
+--- hwmon3 for pc, hwmon5 for laptop
+awful.widget.watch('bash -c "cat /sys/class/hwmon/hwmon5/temp1_input"', 5, function(widget, stdout)
 	stdout = stdout / 1000
 	cpu_temp:set_markup_silently(markup.font(font, " " .. stdout .. "°C"))
 	end
@@ -107,7 +108,7 @@ local sysload = lain.widget.sysload({
 
 
 -- ALSA volume
-local volume
+local volume 
 local volicon = wibox.widget.imagebox(icons.widget_vol)
 volume = lain.widget.alsa({
     settings = function()
@@ -124,16 +125,57 @@ volume = lain.widget.alsa({
         widget:set_markup(markup.font(font, " " .. volume_now.level .. "% "))
     end
 })
-volume.widget:buttons(awful.util.table.join(
-                               awful.button({}, 4, function ()
-                                     awful.util.spawn("amixer set Master 1%+")
-                                     volume.update()
-                               end),
-                               awful.button({}, 5, function ()
-                                     awful.util.spawn("amixer set Master 1%-")
-                                     volume.update()
-                               end)
-))
+
+
+local volume_popup = awful.popup {
+	ontop = false,
+	visible = false,
+	shape = function(cr, width, height)
+		gears.shape.rectangle(cr, width, height)
+	end,
+	border_width = 1,
+	border_color = deco.colors.accent,
+	maximun_width = 400,
+	widget = {}
+}
+
+local volume_popup_items = {
+	{ name = "Output", var = volume_popup_output },
+	{ name = "Mixer", var = volume_popup_mixer }
+}
+
+function open_volume_popup()
+	print("test")
+	if volume_popup.visible then
+		volume_popup.visible = not volume_popup.visible
+		print("test2")
+	else
+		volume_popup:move_next_to(mouse.current_widget_geometry)
+	end
+end
+
+
+volicon:buttons(
+	awful.util.table.join(
+		awful.button({}, 1, open_volume_popup()
+		)
+	)
+)
+
+local rows = { layout  = wibox.layout.fixed.vertical }
+
+for _, item in ipairs(volume_popup_items) do
+	local row = wibox.widget {
+		text = item.name,
+		widget = wibox.widget.textbox,
+		var = item.var
+	}
+	print(row)
+	table.insert(rows, row)
+end
+
+volume_popup:setup(rows)
+
 
 -- Net
 local neticon = wibox.widget.imagebox(icons.widget_net)
@@ -146,6 +188,27 @@ local net = lain.widget.net({
     end
 })
 
+-- Battery
+local baticon = wibox.widget.imagebox(icons.widget_battery)
+local bat = lain.widget.bat({
+    settings = function()
+        if bat_now.status and bat_now.status ~= "N/A" then
+            if bat_now.ac_status == 1 then
+                baticon:set_image(icons.widget_ac)
+            elseif not bat_now.perc and tonumber(bat_now.perc) <= 5 then
+                baticon:set_image(icons.widget_battery_empty)
+            elseif not bat_now.perc and tonumber(bat_now.perc) <= 15 then
+                baticon:set_image(icons.widget_battery_low)
+            else
+                baticon:set_image(icons.widget_battery)
+            end
+            widget:set_markup(markup.font(font, " " .. bat_now.perc .. "% "))
+        else
+            widget:set_markup(markup.font(markup.font, " AC "))
+            baticon:set_image(icons.widget_ac)
+        end
+    end
+})
 
 -- todo: typing speed, music (through cmus), intergrated or dedicated gpu, gpu temps, gpu usage, fan speed, hard drive usage or transfers
 
@@ -195,6 +258,8 @@ awful.screen.connect_for_each_screen(function(s)
     { -- Right widgets
       layout = wibox.layout.fixed.horizontal,
       --music here
+      baticon,
+      bat.widget,
       fs_ma,
       wibox.container.background(memicon, deco.colors.accent),
       wibox.container.background(mem.widget, deco.colors.accent),
@@ -210,15 +275,16 @@ awful.screen.connect_for_each_screen(function(s)
       fs_ma,
       wibox.container.background(volicon, deco.colors.accent),
       wibox.container.background(volume.widget, deco.colors.accent),
-      wibox.widget.systray(),
       bs_am,
       sysloadicon,
       sysload.widget,
 
       --mykeyboardlayout,
-      mytextclock,
       fs_ma,
-      wibox.container.background(s.mylayoutbox, deco.colors.accent)
+      wibox.container.background(mytextclock, deco.colors.accent),
+      bs_am,
+      wibox.widget.systray(),
+      s.mylayoutbox
     },
   }
 end)
